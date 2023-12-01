@@ -43,6 +43,7 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
     private lateinit var enterTestModel: EnterTestModel
     private lateinit var test: TestModel
 
+
     private var isLoadingTest = false
 
 
