@@ -43,6 +43,8 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
     private lateinit var enterTestModel: EnterTestModel
     private lateinit var test: TestModel
 
+    private var isLoadingTest = false
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -50,40 +52,26 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
 
         loginDataModel = viewmodel.getDataFromShared()
 
-           if (loginDataModel.guid.isNullOrEmpty().not()){
-               viewmodel.enterTest(loginDataModel.guid!!, loginDataModel.subId!!).observe(viewLifecycleOwner){ it ->
-                   when (it.status) {
-                       NetworkStatus.LOADING -> {
-                           binding.progressCircular.visibility = View.VISIBLE
-                       }
-                       NetworkStatus.SUCCESS -> {
-                           //binding.progressCircular.visibility = View.INVISIBLE
-                           enterTestModel = it.data!!
-                           viewmodel.getTest(9).observe(viewLifecycleOwner){
-                               when (it.status) {
-                                   NetworkStatus.LOADING -> {
-                                       binding.progressCircular.visibility = View.VISIBLE
-                                   }
-                                   NetworkStatus.SUCCESS -> {
+        if (loginDataModel.guid.isNullOrEmpty().not()) {
+            viewmodel.enterTest(loginDataModel.guid!!, loginDataModel.subId!!)
+                .observe(viewLifecycleOwner) { it ->
+                    when (it.status) {
+                        NetworkStatus.LOADING -> {
+                            binding.progressCircular.visibility = View.VISIBLE
+                        }
 
-                                       test = it.data!!
-                                       openPdfFromUrl(test.question_path)
+                        NetworkStatus.SUCCESS -> {
+                            //binding.progressCircular.visibility = View.INVISIBLE
+                            enterTestModel = it.data!!
 
-                                   }
-                                   NetworkStatus.ERROR -> {
-                                       binding.progressCircular.visibility = View.INVISIBLE
-                                       binding.progressText.visibility = View.INVISIBLE
-                                       showErrorPage()
-                                   }
-                               }
-                           }
-                       }
-                       NetworkStatus.ERROR -> {
-                           binding.progressCircular.visibility = View.INVISIBLE
-                       }
-                   }
-               }
-           }
+                        }
+
+                        NetworkStatus.ERROR -> {
+                            binding.progressCircular.visibility = View.INVISIBLE
+                        }
+                    }
+                }
+        }
 
         //openPdfFromUrl("https://quiz.onlinegroup.uz/Utils/Uploads/Questions/10:10_21.11.2023_android1.pdf")
 
@@ -126,21 +114,54 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
         //endregion
     }
 
+    private fun loadTest(id: Int) {
+        if (!isLoadingTest) {
+            viewmodel.getTest(id).observe(viewLifecycleOwner) {
+                when (it.status) {
+                    NetworkStatus.LOADING -> {
+                        binding.progressCircular.visibility = View.VISIBLE
+                        isLoadingTest = true
+                    }
+
+                    NetworkStatus.SUCCESS -> {
+
+                        test = it.data!!
+                        openPdfFromUrl(test.question_path)
+                        isLoadingTest = false
+                    }
+
+                    NetworkStatus.ERROR -> {
+                        binding.progressCircular.visibility = View.INVISIBLE
+                        binding.progressText.visibility = View.INVISIBLE
+                        showErrorPage()
+                        isLoadingTest = false
+                    }
+                }
+            }
+        }
+        else
+            Toast.makeText(
+                requireContext(),
+                "Test yuklanmoqda ! Takrorlamay turing! ",
+                Toast.LENGTH_SHORT
+            ).show()
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun openPdfFromUrl(url: String) {
         with(binding) {
 
             pdfView.visibility = View.INVISIBLE
-/*
-            val settings: WebSettings = pdfView.settings
-            settings.javaScriptEnabled = true
-            settings.allowFileAccess = true
+            /*
+                        val settings: WebSettings = pdfView.settings
+                        settings.javaScriptEnabled = true
+                        settings.allowFileAccess = true
 
-            settings.builtInZoomControls = true
-            settings.setSupportZoom(true)
-            settings.displayZoomControls = false
+                        settings.builtInZoomControls = true
+                        settings.setSupportZoom(true)
+                        settings.displayZoomControls = false
 
-            pdfView.loadUrl("file:///android_asset/pdfviewer.html?${url}");*/
+                        pdfView.loadUrl("file:///android_asset/pdfviewer.html?${url}");*/
 
             val settings: WebSettings = pdfView.settings
             settings.javaScriptEnabled = true
@@ -169,60 +190,60 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
                 }
 
             }
-           /* pdfView.webViewClient = object : WebViewClient() {
+            /* pdfView.webViewClient = object : WebViewClient() {
 
-                override fun onReceivedError(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                    error: WebResourceError?
-                ) {
-                    super.onReceivedError(view, request, error)
-                    pdfView.reload()
-                    //openPdfFromUrl(url)
-                    binding.logText.text = binding.logText.text.toString() + "\nXatolik! ->" + error.toString()
-                    //Toast.makeText(requireContext(), "Qandaydir xatolik!", Toast.LENGTH_SHORT).show()
-                    // Handle loading error here
-                    // For example, display an error message to the user
-                    //showErrorPage()
-                }
+                 override fun onReceivedError(
+                     view: WebView?,
+                     request: WebResourceRequest?,
+                     error: WebResourceError?
+                 ) {
+                     super.onReceivedError(view, request, error)
+                     pdfView.reload()
+                     //openPdfFromUrl(url)
+                     binding.logText.text = binding.logText.text.toString() + "\nXatolik! ->" + error.toString()
+                     //Toast.makeText(requireContext(), "Qandaydir xatolik!", Toast.LENGTH_SHORT).show()
+                     // Handle loading error here
+                     // For example, display an error message to the user
+                     //showErrorPage()
+                 }
 
-                override fun onReceivedHttpError(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                    errorResponse: WebResourceResponse?
-                ) {
-                    pdfView.visibility = View.INVISIBLE
-                    //pdfView.reload()
-                    //openPdfFromUrl(url)
-                    //Toast.makeText(requireContext(), "HTTP xatolik!", Toast.LENGTH_SHORT).show()
-                    binding.logText.text = binding.logText.text.toString() + "\n HTTP xatolik! ->" + errorResponse.toString()
-                    super.onReceivedHttpError(view, request, errorResponse)
-                }
+                 override fun onReceivedHttpError(
+                     view: WebView?,
+                     request: WebResourceRequest?,
+                     errorResponse: WebResourceResponse?
+                 ) {
+                     pdfView.visibility = View.INVISIBLE
+                     //pdfView.reload()
+                     //openPdfFromUrl(url)
+                     //Toast.makeText(requireContext(), "HTTP xatolik!", Toast.LENGTH_SHORT).show()
+                     binding.logText.text = binding.logText.text.toString() + "\n HTTP xatolik! ->" + errorResponse.toString()
+                     super.onReceivedHttpError(view, request, errorResponse)
+                 }
 
-                override fun onReceivedSslError(
-                    view: WebView?,
-                    handler: SslErrorHandler?,
-                    error: SslError?
-                ) {
-                    super.onReceivedSslError(view, handler, error)
-                    openPdfFromUrl(url)
-                    Toast.makeText(requireContext(), "SSL xatolik!", Toast.LENGTH_SHORT).show()
-                    binding.logText.text = binding.logText.text.toString() + "\n" + error.toString()
-                }
+                 override fun onReceivedSslError(
+                     view: WebView?,
+                     handler: SslErrorHandler?,
+                     error: SslError?
+                 ) {
+                     super.onReceivedSslError(view, handler, error)
+                     openPdfFromUrl(url)
+                     Toast.makeText(requireContext(), "SSL xatolik!", Toast.LENGTH_SHORT).show()
+                     binding.logText.text = binding.logText.text.toString() + "\n" + error.toString()
+                 }
 
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    if (view != null) {
-                        if (view.title.equals(""))
-                            view.reload()
-                    }else{
-                        Toast.makeText(requireContext(), "view = null", Toast.LENGTH_SHORT).show()
-                    }
-//                    binding.swiperefresh.isEnabled = false
-//                    binding.pdfView.visibility = View.VISIBLE
-                }
-            }
-*/
+                 override fun onPageFinished(view: WebView?, url: String?) {
+                     super.onPageFinished(view, url)
+                     if (view != null) {
+                         if (view.title.equals(""))
+                             view.reload()
+                     }else{
+                         Toast.makeText(requireContext(), "view = null", Toast.LENGTH_SHORT).show()
+                     }
+ //                    binding.swiperefresh.isEnabled = false
+ //                    binding.pdfView.visibility = View.VISIBLE
+                 }
+             }
+ */
 
 
         }
