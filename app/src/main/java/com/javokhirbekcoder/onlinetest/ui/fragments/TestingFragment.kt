@@ -26,10 +26,11 @@ import com.javokhirbekcoder.onlinetest.ui.models.EnterTestModel
 import com.javokhirbekcoder.onlinetest.ui.models.LoginDataModel
 import com.javokhirbekcoder.onlinetest.ui.models.TestModel
 import com.javokhirbekcoder.onlinetest.ui.viewModels.TestingFragmentViewModel
+import com.javokhirbekcoder.onlinetest.utils.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragment_testing) {
+class TestingFragment : Fragment(R.layout.fragment_testing) {
 
     private var _binding: FragmentTestingBinding? = null
     private val binding get() = _binding!!
@@ -49,7 +50,7 @@ class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragme
 
         loginDataModel = viewmodel.getDataFromShared()
 
-        /*   if (loginDataModel.guid.isNullOrEmpty().not()){
+           if (loginDataModel.guid.isNullOrEmpty().not()){
                viewmodel.enterTest(loginDataModel.guid!!, loginDataModel.subId!!).observe(viewLifecycleOwner){ it ->
                    when (it.status) {
                        NetworkStatus.LOADING -> {
@@ -58,7 +59,7 @@ class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragme
                        NetworkStatus.SUCCESS -> {
                            //binding.progressCircular.visibility = View.INVISIBLE
                            enterTestModel = it.data!!
-                           viewmodel.getTest(1).observe(viewLifecycleOwner){
+                           viewmodel.getTest(9).observe(viewLifecycleOwner){
                                when (it.status) {
                                    NetworkStatus.LOADING -> {
                                        binding.progressCircular.visibility = View.VISIBLE
@@ -66,11 +67,13 @@ class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragme
                                    NetworkStatus.SUCCESS -> {
 
                                        test = it.data!!
-                                       //openPdfFromUrl(test.question_path)
-                                       //Toast.makeText(requireContext(), test.question_path, Toast.LENGTH_SHORT).show()
+                                       openPdfFromUrl(test.question_path)
+
                                    }
                                    NetworkStatus.ERROR -> {
                                        binding.progressCircular.visibility = View.INVISIBLE
+                                       binding.progressText.visibility = View.INVISIBLE
+                                       showErrorPage()
                                    }
                                }
                            }
@@ -81,9 +84,8 @@ class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragme
                    }
                }
            }
-   */
 
-        openPdfFromUrl("https://quiz.onlinegroup.uz/Utils/Uploads/Questions/10:10_21.11.2023_android1.pdf")
+        //openPdfFromUrl("https://quiz.onlinegroup.uz/Utils/Uploads/Questions/10:10_21.11.2023_android1.pdf")
 
         binding.swiperefresh.setOnRefreshListener {
             binding.pdfView.reload()
@@ -160,17 +162,23 @@ class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragme
                     binding.progressText.text = newProgress.toString() + " %"
                 }
 
-            }
-            pdfView.webViewClient = object : WebViewClient() {
+                override fun onReceivedTitle(view: WebView?, title: String?) {
+                    super.onReceivedTitle(view, title)
+                    if (title.isNullOrEmpty())
+                        pdfView.reload()
+                }
 
-                // Override onReceivedError to handle loading errors
+            }
+           /* pdfView.webViewClient = object : WebViewClient() {
+
                 override fun onReceivedError(
                     view: WebView?,
                     request: WebResourceRequest?,
                     error: WebResourceError?
                 ) {
                     super.onReceivedError(view, request, error)
-                    openPdfFromUrl(url)
+                    pdfView.reload()
+                    //openPdfFromUrl(url)
                     binding.logText.text = binding.logText.text.toString() + "\nXatolik! ->" + error.toString()
                     //Toast.makeText(requireContext(), "Qandaydir xatolik!", Toast.LENGTH_SHORT).show()
                     // Handle loading error here
@@ -184,7 +192,7 @@ class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragme
                     errorResponse: WebResourceResponse?
                 ) {
                     pdfView.visibility = View.INVISIBLE
-                    pdfView.reload()
+                    //pdfView.reload()
                     //openPdfFromUrl(url)
                     //Toast.makeText(requireContext(), "HTTP xatolik!", Toast.LENGTH_SHORT).show()
                     binding.logText.text = binding.logText.text.toString() + "\n HTTP xatolik! ->" + errorResponse.toString()
@@ -204,10 +212,18 @@ class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragme
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    if (view != null) {
+                        if (view.title.equals(""))
+                            view.reload()
+                    }else{
+                        Toast.makeText(requireContext(), "view = null", Toast.LENGTH_SHORT).show()
+                    }
 //                    binding.swiperefresh.isEnabled = false
 //                    binding.pdfView.visibility = View.VISIBLE
                 }
             }
+*/
+
 
         }
 
@@ -216,7 +232,7 @@ class TestingFragment : Fragment(com.javokhirbekcoder.onlinetest.R.layout.fragme
     private fun showErrorPage() {
         binding.pdfView.loadDataWithBaseURL(
             null,
-            "<html><body><h1>Failed to load page</h1></body></html>",
+            "<html><body><h2>Testni yuklashda xatolik</h2></body></html>",
             "text/html",
             "UTF-8",
             null
