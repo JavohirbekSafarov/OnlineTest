@@ -1,7 +1,9 @@
 package com.javokhirbekcoder.onlinetest.di
 
 import android.content.Context
+import androidx.room.Room
 import com.javokhirbekcoder.onlinetest.api.ApiService
+import com.javokhirbekcoder.onlinetest.room.AppDatabase
 import com.javokhirbekcoder.onlinetest.utils.NetworkStateListener
 import com.javokhirbekcoder.onlinetest.utils.SharedPrefs
 import dagger.Module
@@ -46,7 +48,25 @@ class AppModule {
 
     @Singleton
     @Provides
-    fun provideSharedPrefs(@ApplicationContext context: Context):SharedPrefs{
+    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+
+        var INSTANCE: AppDatabase? = null
+
+        if (INSTANCE == null) { //ochirvorsa boladimi tekshirish kk
+            synchronized(AppDatabase::class) {
+                INSTANCE = Room.databaseBuilder(
+                    context,
+                    AppDatabase::class.java,
+                    "app_database"
+                ).build()
+            }
+        }
+        return INSTANCE!!
+    }
+
+    @Singleton
+    @Provides
+    fun provideSharedPrefs(@ApplicationContext context: Context): SharedPrefs {
         return SharedPrefs(context)
     }
 

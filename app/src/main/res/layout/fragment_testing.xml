@@ -22,6 +22,7 @@
             android:layout_weight="1" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/questionsBtn"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:backgroundTint="@color/primary"
@@ -34,6 +35,7 @@
             android:layout_weight="1" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/previousBtn"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:backgroundTint="@color/primary"
@@ -46,6 +48,7 @@
             android:layout_weight="1" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/nextBtn"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:backgroundTint="@color/primary"
@@ -58,6 +61,7 @@
             android:layout_weight="1" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/submitBtn"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:backgroundTint="@color/primary"
@@ -126,16 +130,18 @@
         android:id="@+id/scrollView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        tools:layout_editor_absoluteX="5dp"
-        tools:layout_editor_absoluteY="5dp">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        >
 
         <TextView
             android:id="@+id/logText"
             android:layout_width="wrap_content"
-            android:textSize="5sp"
             android:layout_height="wrap_content"
+            android:background="@color/black"
             android:textColor="@color/green"
-            android:background="@color/black"/>
+            android:textSize="9sp" />
+
     </ScrollView>
 
 

@@ -1,17 +1,13 @@
 package com.javokhirbekcoder.onlinetest.ui.fragments
 
 import android.annotation.SuppressLint
-import android.net.http.SslError
+import android.app.AlertDialog
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
-import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.LinearLayout.LayoutParams
@@ -19,70 +15,248 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.javokhirbekcoder.onlinetest.R
 import com.javokhirbekcoder.onlinetest.databinding.FragmentTestingBinding
+import com.javokhirbekcoder.onlinetest.ui.adapters.OnItemClickListener
+import com.javokhirbekcoder.onlinetest.ui.adapters.TestsDialogRvAdapter
+import com.javokhirbekcoder.onlinetest.ui.models.AnswerModel
 import com.javokhirbekcoder.onlinetest.ui.models.EnterTestModel
 import com.javokhirbekcoder.onlinetest.ui.models.LoginDataModel
-import com.javokhirbekcoder.onlinetest.ui.models.TestModel
+import com.javokhirbekcoder.onlinetest.ui.models.TestModelLocal
 import com.javokhirbekcoder.onlinetest.ui.viewModels.TestingFragmentViewModel
 import com.javokhirbekcoder.onlinetest.utils.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class TestingFragment : Fragment(R.layout.fragment_testing) {
+@SuppressLint("SetTextI18n")
+class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener {
 
     private var _binding: FragmentTestingBinding? = null
     private val binding get() = _binding!!
     private val viewmodel: TestingFragmentViewModel by viewModels()
 
     private var asciiVal = 65
-    private val answersSize = 4
+    private var answersSize = 0
 
     private lateinit var loginDataModel: LoginDataModel
     private lateinit var enterTestModel: EnterTestModel
-    private lateinit var test: TestModel
+    //private lateinit var test: TestModel
 
+    //private var isLoadingTest = false
 
-    private var isLoadingTest = false
+    private var questionPos = -1
+    private val answers = ArrayList<String>()
+    private var testModel = ArrayList<TestModelLocal>()
 
+    private var reloadTestPos = -1
+    private lateinit var alertDialog: AlertDialog
+
+    private var openedtest = TestModelLocal("", 0, -1, "", -1, 0)
+
+    private val loadingTest = true
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentTestingBinding.bind(view)
 
-        loginDataModel = viewmodel.getDataFromShared()
 
-        if (loginDataModel.guid.isNullOrEmpty().not()) {
-            viewmodel.enterTest(loginDataModel.guid!!, loginDataModel.subId!!)
-                .observe(viewLifecycleOwner) { it ->
+        firstLoadTest()
+
+        binding.swiperefresh.setOnRefreshListener {
+            if (reloadTestPos != -1) {
+                showTest(reloadTestPos)
+                Toast.makeText(requireContext(), "Reload id = $reloadTestPos", Toast.LENGTH_SHORT)
+                    .show()
+            } else {
+                if (testModel.size > 0) {
+                    showTest(testModel.lastIndex)
+                    Toast.makeText(
+                        requireContext(),
+                        "else Reload id = ${testModel.lastIndex}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            binding.swiperefresh.isRefreshing = false
+        }
+
+        binding.questionsBtn.setOnClickListener {
+            showTestsListDialog()
+        }
+
+        binding.submitBtn.setOnClickListener {
+            if (viewmodel.getAnswersLocal().size == enterTestModel.contest.test_count) {
+                addLog("Hamma javob kiritilgan")
+                val contesters = enterTestModel.contesters
+                var answersString = ""
+                val answersList = viewmodel.getAnswersLocal()
+                //for (i in enterTestModel.contest.tests)
+                for (i in 1..enterTestModel.contest.test_count) {
+                    val testid = enterTestModel.contest.tests.split(",")[i - 1].toInt()
+                    answersList.forEach{
+                        if (it.id == testid){
+                            answersString += it.selectedAnswer + ","
+                        }
+                    }
+                }
+                contesters.answers = answersString
+                addLog(answersString)
+                viewmodel.submitTest(contesters).observe(viewLifecycleOwner){
                     when (it.status) {
                         NetworkStatus.LOADING -> {
                             binding.progressCircular.visibility = View.VISIBLE
                         }
-
                         NetworkStatus.SUCCESS -> {
-                            //binding.progressCircular.visibility = View.INVISIBLE
-                            enterTestModel = it.data!!
-
+                            binding.progressCircular.visibility = View.INVISIBLE
+                            addLog("succes add to api")
                         }
-
                         NetworkStatus.ERROR -> {
                             binding.progressCircular.visibility = View.INVISIBLE
+                            addLog("error to add api")
+                            addLog(it.message!!)
                         }
                     }
                 }
+            } else {
+                addLog("To'liq javob berilmagan")
+            }
         }
 
-        //openPdfFromUrl("https://quiz.onlinegroup.uz/Utils/Uploads/Questions/10:10_21.11.2023_android1.pdf")
+    }
 
-        binding.swiperefresh.setOnRefreshListener {
-            binding.pdfView.reload()
-            binding.swiperefresh.isRefreshing = false
+    private fun firstLoadTest() {
+        loginDataModel = viewmodel.getDataFromShared()
+
+        if (loginDataModel.guid.isNullOrEmpty().not()) {
+
+            CoroutineScope(Dispatchers.IO).launch {
+
+                if (viewmodel.getEnterTestModel().contest == null) {
+
+                    CoroutineScope(Dispatchers.Main).launch {
+
+                        Toast.makeText(requireContext(), "Null", Toast.LENGTH_SHORT).show()
+
+                        viewmodel.enterTest(loginDataModel.guid!!, loginDataModel.subId!!)
+                            .observe(viewLifecycleOwner) { it ->
+                                when (it.status) {
+                                    NetworkStatus.LOADING -> {
+                                        binding.progressCircular.visibility = View.VISIBLE
+                                    }
+
+                                    NetworkStatus.SUCCESS -> {
+                                        enterTestModel = it.data!!
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            viewmodel.saveEnterTestModel(enterTestModel)
+                                        }
+                                        Toast.makeText(requireContext(), "Api", Toast.LENGTH_SHORT)
+                                            .show()
+                                        saveTestsLocal()
+                                    }
+
+                                    NetworkStatus.ERROR -> {
+                                        binding.progressCircular.visibility = View.INVISIBLE
+                                        binding.logText.text =
+                                            binding.logText.text.toString() + it.message
+                                    }
+                                }
+                            }
+                    }
+                } else {
+                    enterTestModel = EnterTestModel(
+                        viewmodel.getEnterTestModel().contest!!,
+                        viewmodel.getEnterTestModel().contesters!!
+                    )
+                    CoroutineScope(Dispatchers.Main).launch {
+                        Toast.makeText(requireContext(), "Database", Toast.LENGTH_SHORT).show()
+                        saveTestsLocal()
+                    }
+
+                }
+            }
+
+
+        } else {
+            Toast.makeText(requireContext(), "Iltimos qaytadan testga kiring!", Toast.LENGTH_SHORT)
+                .show()
         }
+    }
 
-        // region Create Button
+    private fun showTestsListDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_tests_list, null)
+        dialogView.setBackgroundColor(Color.TRANSPARENT)
 
+        val rv = dialogView.findViewById<RecyclerView>(R.id.testsRv)
+
+        val adapter = TestsDialogRvAdapter(testModel, this)
+        rv.adapter = adapter
+
+        //Toast.makeText(requireContext(), adapter.itemCount.toString(), Toast.LENGTH_SHORT).show()
+
+        builder.setView(dialogView)
+            .setTitle("Savolni tanlang:")
+
+        alertDialog = builder.create()
+        alertDialog.show()
+    }
+
+
+    private fun saveTestsLocal() {
+        viewmodel.deleteTestLocal()
+        for (i in 1..enterTestModel.contest.test_count) {
+            //for (i in enterTestModel.contest.tests.split(",")) {
+            //if (i.isNotEmpty()) {
+            binding.logText.text =
+                binding.logText.text.toString() + "\nTestni yuklash position = " + i
+            //if (enterTestModel.contest.test_count)
+            loadTest(enterTestModel.contest.tests.split(",")[i - 1].toInt())
+            //}
+        }
+        testModel = viewmodel.getTestsLocal()
+
+        binding.progressCircular.visibility = View.INVISIBLE
+    }
+
+    private fun loadTest(id: Int) {
+        //reloadTestPos = id
+        viewmodel.getTest(id).observe(viewLifecycleOwner) {
+            when (it.status) {
+                NetworkStatus.LOADING -> {
+                    binding.progressCircular.visibility = View.VISIBLE
+                }
+
+                NetworkStatus.SUCCESS -> {
+                    val testModelLocal = TestModelLocal(
+                        it.data!!.answer, it.data.answer_count,
+                        it.data.id, it.data.question_path, it.data.subject_id, 0
+                    )
+                    viewmodel.addTestLocal(testModelLocal)
+                    binding.logText.text =
+                        binding.logText.text.toString() + "\nTestni saqlash id = " + it.data.id
+                    if (enterTestModel.contest.test_count == viewmodel.getTestsLocal().size) {
+                        showTest(0)
+                    }
+                }
+
+                NetworkStatus.ERROR -> {
+                    binding.progressCircular.visibility = View.INVISIBLE
+                    binding.progressText.visibility = View.INVISIBLE
+                    showErrorPage()
+                }
+            }
+        }
+    }
+
+    private fun createButtons() {
+        asciiVal = 65
+        binding.answersLayout.removeAllViews()
         for (i in 1..answersSize) {
             val params = LinearLayout.LayoutParams(
                 LayoutParams.MATCH_PARENT,
@@ -95,63 +269,47 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
             val btn = MaterialButton(requireContext())
             btn.cornerRadius = 15
             btn.id = i
-            val id_ = btn.id
+            val myId = btn.id
             btn.text = asciiVal.toChar().toString()
             btn.textSize = 13.0f
             btn.insetBottom = 0
+
             btn.insetTop = 0
             asciiVal++;
             btn.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.primary))
             binding.answersLayout.addView(btn, params)
-            val btn1 = requireActivity().findViewById(id_) as Button
-            btn1.setOnClickListener(View.OnClickListener { view ->
-                Toast.makeText(
-                    view.context,
-                    "Button clicked index = $id_, Text = ${btn.text}", Toast.LENGTH_SHORT
-                ).show()
-            })
-        }
+            val btn1 = requireActivity().findViewById(myId) as Button
+            btn1.setOnClickListener { view ->
 
-        //endregion
-    }
+                viewmodel.addAnswerLocal(
+                    AnswerModel(
+                        openedtest.id,
+                        openedtest.answer,
+                        btn.text.toString()
+                    )
+                )
 
-    private fun loadTest(id: Int) {
-        if (!isLoadingTest) {
-            viewmodel.getTest(id).observe(viewLifecycleOwner) {
-                when (it.status) {
-                    NetworkStatus.LOADING -> {
-                        binding.progressCircular.visibility = View.VISIBLE
-                        isLoadingTest = true
-                    }
+//                Toast.makeText(
+//                    view.context,
+//                    "${openedtest.id}, ${openedtest.answer}, ${btn.text}",
+//                    Toast.LENGTH_SHORT
+//                ).show()
 
-                    NetworkStatus.SUCCESS -> {
-
-                        test = it.data!!
-                        openPdfFromUrl(test.question_path)
-                        isLoadingTest = false
-                    }
-
-                    NetworkStatus.ERROR -> {
-                        binding.progressCircular.visibility = View.INVISIBLE
-                        binding.progressText.visibility = View.INVISIBLE
-                        showErrorPage()
-                        isLoadingTest = false
-                    }
-                }
+                addLog("${openedtest.id}, ${openedtest.answer}, ${btn.text}")
             }
         }
-        else
-            Toast.makeText(
-                requireContext(),
-                "Test yuklanmoqda ! Takrorlamay turing! ",
-                Toast.LENGTH_SHORT
-            ).show()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun openPdfFromUrl(url: String) {
-        with(binding) {
 
+        binding.progressCircular.visibility = View.VISIBLE
+        binding.progressText.visibility = View.VISIBLE
+        binding.pdfView.visibility = View.INVISIBLE
+
+        with(binding) {
+            pdfView.clearCache(true)
+            pdfView.invalidate()
             pdfView.visibility = View.INVISIBLE
             /*
                         val settings: WebSettings = pdfView.settings
@@ -168,7 +326,6 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
             settings.javaScriptEnabled = true
             settings.builtInZoomControls = true;
             settings.setSupportZoom(true)
-            pdfView.invalidate()
 
             pdfView.loadUrl("https://docs.google.com/viewer?url=$url")
             //pdfView.loadUrl("https://drive.google.com/viewerng/viewer?embedded=true&url=$url")
@@ -178,16 +335,26 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
                     if (newProgress == 100) {
                         binding.progressCircular.visibility = View.INVISIBLE
                         binding.progressText.visibility = View.INVISIBLE
-                        binding.swiperefresh.isEnabled = false
+                        binding.swiperefresh.isEnabled = true
                         binding.pdfView.visibility = View.VISIBLE
+                    } else {
+                        binding.swiperefresh.isEnabled = true
+                        binding.progressCircular.visibility = View.VISIBLE
+                        binding.progressText.visibility = View.VISIBLE
+                        binding.pdfView.visibility = View.INVISIBLE
+                        binding.progressText.text = "$newProgress %"
+
                     }
-                    binding.progressText.text = newProgress.toString() + " %"
                 }
 
+
+                @SuppressLint("SuspiciousIndentation")
                 override fun onReceivedTitle(view: WebView?, title: String?) {
                     super.onReceivedTitle(view, title)
                     if (title.isNullOrEmpty())
                         pdfView.reload()
+                    binding.progressCircular.visibility = View.VISIBLE
+                    binding.swiperefresh.isEnabled = true
                 }
 
             }
@@ -246,15 +413,15 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
              }
  */
 
-
         }
 
     }
 
     private fun showErrorPage() {
+        firstLoadTest()
         binding.pdfView.loadDataWithBaseURL(
             null,
-            "<html><body><h2>Testni yuklashda xatolik</h2></body></html>",
+            "<html><body><h2>Testni yuklashda xatolik, Qaytadan urinib ko`ring!</h2></body></html>",
             "text/html",
             "UTF-8",
             null
@@ -265,5 +432,24 @@ class TestingFragment : Fragment(R.layout.fragment_testing) {
         super.onDestroyView()
         binding.pdfView.destroy()
         _binding = null
+    }
+
+    override fun onItemClick(position: Int) {
+        alertDialog.dismiss()
+        showTest(position)
+    }
+
+    private fun showTest(position: Int) {
+        addLog("Show test $position")
+        questionPos = position
+        openedtest = testModel[position]
+        answersSize = openedtest.answer_count
+        createButtons()
+        reloadTestPos = position
+        openPdfFromUrl(openedtest.question_path)
+    }
+
+    private fun addLog(messsage: String) {
+        binding.logText.text = binding.logText.text.toString() + "\n" + messsage
     }
 }

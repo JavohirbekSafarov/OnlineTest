@@ -1,6 +1,7 @@
 package com.javokhirbekcoder.onlinetest.ui.viewModels
 
 import androidx.lifecycle.ViewModel
+import com.javokhirbekcoder.onlinetest.ui.models.EnterTestModel
 import com.javokhirbekcoder.onlinetest.ui.models.LoginDataModel
 import com.javokhirbekcoder.onlinetest.ui.repository.MainRepository
 import com.javokhirbekcoder.onlinetest.utils.NetworkStateListener
@@ -14,7 +15,7 @@ Created by Javokhirbek on 29/11/2023 at 07:11
 @HiltViewModel
 class LoginFragmentViewModel @Inject constructor(
     private val mainRepository: MainRepository,
-    private val networkStateListener: NetworkStateListener,
+    networkStateListener: NetworkStateListener,
     private val sharedPrefs: SharedPrefs
 ) : ViewModel() {
     val networkState = networkStateListener
@@ -31,4 +32,6 @@ class LoginFragmentViewModel @Inject constructor(
         val id = sharedPrefs.getSubId()
         return LoginDataModel(guid, id)
     }
+    suspend fun saveEnterTestModel(enterTestModel:EnterTestModel) = mainRepository.saveEnterTestModel(enterTestModel)
+    fun deleteTestLocal() = mainRepository.deleteTestsLocal()
 }

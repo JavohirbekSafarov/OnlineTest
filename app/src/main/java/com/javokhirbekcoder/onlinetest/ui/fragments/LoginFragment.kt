@@ -21,6 +21,9 @@ import com.javokhirbekcoder.onlinetest.ui.viewModels.LoginFragmentViewModel
 import com.javokhirbekcoder.onlinetest.utils.NetworkResult
 import com.javokhirbekcoder.onlinetest.utils.NetworkStatus
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
@@ -32,6 +35,8 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
     private val subjects = Subjects()
     private var selectedSub = -1
     private var guid = ""
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
 
     private val enterTestObserver = Observer<NetworkResult<EnterTestModel>> { result ->
         when (result.status) {
@@ -41,9 +46,14 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             }
 
             NetworkStatus.SUCCESS -> {
+                viewmodel.setDataToShared(guid, selectedSub)
+                coroutineScope.launch {
+                    viewmodel.saveEnterTestModel(result.data!!)
+                    viewmodel.deleteTestLocal()
+                }
+                Thread.sleep(1000)
                 binding.loading.visibility = View.INVISIBLE
                 binding.enterTestBtn.visibility = View.VISIBLE
-                viewmodel.setDataToShared(guid, selectedSub)
                 findNavController().navigate(R.id.action_loginFragment_to_testingFragment)
                 Toast.makeText(requireContext(), result.data.toString(), Toast.LENGTH_SHORT).show()
                 viewmodel.enterTest(guid, selectedSub).removeObservers(viewLifecycleOwner)
@@ -109,8 +119,8 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         }
 
         binding.enterTestBtn.setOnClickListener {
+            viewmodel.setDataToShared("69adbe0a-30a3-4ec6-af02-4216c6469f58", 2)
             findNavController().navigate(R.id.action_loginFragment_to_testingFragment)
-            viewmodel.setDataToShared("34b86e3c-f3c3-4f57-b0f2-93029d294d8a", 2)
 //            if (guid != "" && guid.isNotEmpty() && selectedSub != -1)
 //                viewmodel.enterTest(guid, selectedSub).observe(viewLifecycleOwner, enterTestObserver)
 //            else

@@ -1,6 +1,10 @@
 package com.javokhirbekcoder.onlinetest.ui.models
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import com.javokhirbekcoder.onlinetest.room.DatabaseConfig
+
 data class EnterTestModel(
-    val contest: Contest,
+    var contest: Contest,
     val contesters: Contesters
 )
