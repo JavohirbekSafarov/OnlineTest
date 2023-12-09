@@ -41,8 +41,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
     private val enterTestObserver = Observer<NetworkResult<EnterTestModel>> { result ->
         when (result.status) {
             NetworkStatus.LOADING -> {
-                binding.loading.visibility = View.VISIBLE
-                binding.enterTestBtn.visibility = View.INVISIBLE
+
             }
 
             NetworkStatus.SUCCESS -> {
@@ -119,15 +118,18 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         }
 
         binding.enterTestBtn.setOnClickListener {
-            viewmodel.setDataToShared("69adbe0a-30a3-4ec6-af02-4216c6469f58", 2)
-            findNavController().navigate(R.id.action_loginFragment_to_testingFragment)
-//            if (guid != "" && guid.isNotEmpty() && selectedSub != -1)
-//                viewmodel.enterTest(guid, selectedSub).observe(viewLifecycleOwner, enterTestObserver)
-//            else
-//                showEmptyDataDialog()
+            //viewmodel.setDataToShared("69adbe0a-30a3-4ec6-af02-4216c6469f58", 2)
+            //findNavController().navigate(R.id.action_loginFragment_to_testingFragment)
+            if (guid != "" && guid.isNotEmpty() && selectedSub != -1) {
+                viewmodel.enterTest(guid, selectedSub)
+                    .observe(viewLifecycleOwner, enterTestObserver)
+                binding.loading.visibility = View.VISIBLE
+                binding.enterTestBtn.visibility = View.INVISIBLE
+            } else
+                showEmptyDataDialog()
         }
 
-        binding.enterTestBtn.callOnClick()
+        //binding.enterTestBtn.callOnClick()
 
     }
 

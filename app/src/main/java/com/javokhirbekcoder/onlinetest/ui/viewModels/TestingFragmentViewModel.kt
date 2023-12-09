@@ -29,6 +29,9 @@ class TestingFragmentViewModel @Inject constructor(
         val id = sharedPrefs.getSubId()
         return LoginDataModel(guid, id)
     }
+
+    fun getSubjects() = mainRepository.getSubjectsList()
+    fun reloadSubjects() = mainRepository.getSubjects()
     fun enterTest(guid:String, id:Int) = mainRepository.enterTest(guid, id)
     fun getTest(id:Int) = mainRepository.getTest(id)
     fun addTestLocal(testModel: TestModelLocal) = mainRepository.addTestLocal(testModel)
@@ -36,9 +39,13 @@ class TestingFragmentViewModel @Inject constructor(
     fun deleteTestLocal() = mainRepository.deleteTestsLocal()
     fun addAnswerLocal(answerModel: AnswerModel) = mainRepository.addAnswerLocal(answerModel)
     fun getAnswersLocal() = mainRepository.getAnswerLocal()
-    fun deleteAnswerLocal() = mainRepository.deleteAnswersLocal()
+    suspend fun loadAnswersDatabase() = mainRepository.getAnswersFromDatabase()
+    suspend fun addAnswersDatabase() = mainRepository.saveAnswersToDatabase()
+    suspend fun deleteAnswersDatabase() = mainRepository.deleteAnswersFromDatabase()
 
+    fun deleteAnswerLocal() = mainRepository.deleteAnswersLocal()
     fun submitTest(contesters: Contesters) = mainRepository.submitTest(contesters)
+    fun getContestType(id: Int) = mainRepository.getContestType(id)
 
     suspend fun getEnterTestModel() = mainRepository.getEnterTestModel()
     suspend fun saveEnterTestModel(enterTestModel: EnterTestModel) = mainRepository.saveEnterTestModel(enterTestModel)

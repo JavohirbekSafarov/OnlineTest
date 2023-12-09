@@ -3,4 +3,6 @@
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="online_test">Online Test</string>
+    <string name="pic">pic</string>
+    <string name="presents_by_online_group">Presents by Online Group</string>
 </resources>

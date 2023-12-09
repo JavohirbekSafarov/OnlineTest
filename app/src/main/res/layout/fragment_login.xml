@@ -8,13 +8,14 @@
     tools:context=".ui.fragments.LoginFragment">
 
     <ScrollView
+        android:id="@+id/scrollView2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
-<!--        Button kotarilishi uchun yozdim -->
+        <!--        Button kotarilishi uchun yozdim -->
 
     </ScrollView>
 
@@ -80,6 +81,7 @@
         android:layout_marginBottom="24dp"
         android:backgroundTint="@color/primary"
         android:text="Testga kirish"
+        android:fontFamily="@font/poppins_medium"
         app:cornerRadius="5dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

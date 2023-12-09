@@ -28,7 +28,7 @@ class MainRepository @Inject constructor(
 
     val subjectsList = MutableLiveData<NetworkResult<Subjects>>()
     private val tests = ArrayList<TestModelLocal>()
-    private val answers = ArrayList<AnswerModel>()
+    private var answers = ArrayList<AnswerModel>()
 
     fun addTestLocal(testModel: TestModelLocal) {
         tests.add(testModel)
@@ -40,9 +40,27 @@ class MainRepository @Inject constructor(
         tests.clear()
     }
 
+    suspend fun saveAnswersToDatabase(){
+        database.Dao().deleteAnswers()
+        answers.forEach {
+            database.Dao().insertAnswers(it)
+        }
+    }
+
+    suspend fun getAnswersFromDatabase(){
+        answers.clear()
+        answers.addAll(database.Dao().getAnswers())
+        //return database.Dao().getAnswers()
+    }
+
+    suspend fun deleteAnswersFromDatabase(){
+        database.Dao().deleteAnswers()
+    }
+
     fun addAnswerLocal(answerModel: AnswerModel) {
         answers.forEach {
             if (it.id == answerModel.id) {
+                it.selectedAnswer = answerModel.selectedAnswer
                 return
             }
         }
@@ -71,6 +89,26 @@ class MainRepository @Inject constructor(
            return myString
        }*/
 
+    fun getContestType(id :Int):MutableLiveData<NetworkResult<String>>{
+        val contestType = MutableLiveData<NetworkResult<String>>()
+        contestType.postValue(NetworkResult.loading())
+
+        apiService.getContestType(id).enqueue(object :Callback<ResponseModel>{
+            override fun onResponse(call: Call<ResponseModel>, response: Response<ResponseModel>) {
+                if (response.code() == 200) {
+                    contestType.postValue(NetworkResult.success(response.body()!!.data))
+                }else if (response.code() == 404){
+                    contestType.postValue(NetworkResult.error("Topilmadi!"))
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseModel>, t: Throwable) {
+                contestType.postValue(NetworkResult.error("Yuklashda xatolik!"))
+            }
+        })
+
+        return contestType
+    }
     fun getSubjects(): MutableLiveData<NetworkResult<Subjects>> {
 
         subjectsList.postValue(NetworkResult.loading())
@@ -176,8 +214,12 @@ class MainRepository @Inject constructor(
         )
     }
 
-    suspend fun deleteEnterTestModel() {
+    private suspend fun deleteEnterTestModel() {
         database.Dao().deleteContests()
         database.Dao().deleteContesters()
+    }
+
+    fun getSubjectsList(): Subjects? {
+        return subjectsList.value?.data
     }
 }

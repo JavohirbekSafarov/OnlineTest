@@ -11,7 +11,7 @@ data class Contest(
     val contest_type_id: Int,
     val duration: Int,
     val end_date: String,
-    val max_ball: Int,
+    var max_ball: Int,
     val start_date: String,
     val subject_id: Int,
     val test_count: Int,

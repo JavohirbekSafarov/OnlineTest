@@ -25,6 +25,11 @@ interface ApiService {
     @GET("/subjects")
     fun getSubjects(): Call<Subjects>
 
+    @GET("/contest_type")
+    fun getContestType(
+        @Query("_id") id:Int
+    ):Call<ResponseModel>
+
     @GET("/enter_test")
     fun getTestData(
         @Query("guid") guid: String,

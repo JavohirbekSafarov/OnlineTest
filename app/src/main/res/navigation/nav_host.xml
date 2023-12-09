@@ -30,5 +30,18 @@
         android:id="@+id/testingFragment"
         android:name="com.javokhirbekcoder.onlinetest.ui.fragments.TestingFragment"
         android:label="fragment_testing"
-        tools:layout="@layout/fragment_testing" />
+        tools:layout="@layout/fragment_testing" >
+        <action
+            android:id="@+id/action_testingFragment_to_resultFragment"
+            app:destination="@id/resultFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/resultFragment"
+        android:name="com.javokhirbekcoder.onlinetest.ui.fragments.ResultFragment"
+        android:label="fragment_result"
+        tools:layout="@layout/fragment_result" >
+        <action
+            android:id="@+id/action_resultFragment_to_loginFragment"
+            app:destination="@id/loginFragment" />
+    </fragment>
 </navigation>

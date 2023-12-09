@@ -9,12 +9,12 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.LinearLayout.LayoutParams
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.javokhirbekcoder.onlinetest.R
@@ -46,40 +46,40 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
     private lateinit var loginDataModel: LoginDataModel
     private lateinit var enterTestModel: EnterTestModel
     //private lateinit var test: TestModel
-
     //private var isLoadingTest = false
-
-    private var questionPos = -1
-    private val answers = ArrayList<String>()
-    private var testModel = ArrayList<TestModelLocal>()
+    //private val answers = ArrayList<String>()
+    // private val loadingTest = true
 
     private var reloadTestPos = -1
+    private var questionPos = -1
+
+    private var testModel = ArrayList<TestModelLocal>()
+
     private lateinit var alertDialog: AlertDialog
 
     private var openedtest = TestModelLocal("", 0, -1, "", -1, 0)
 
-    private val loadingTest = true
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentTestingBinding.bind(view)
-
+// For testing
+//        viewmodel.addAnswerLocal(AnswerModel(1, "A", "A"))
+//        viewmodel.addAnswerLocal(AnswerModel(3, "B", "B"))
+//        viewmodel.addAnswerLocal(AnswerModel(2, "B", "C"))
 
         firstLoadTest()
+
+
 
         binding.swiperefresh.setOnRefreshListener {
             if (reloadTestPos != -1) {
                 showTest(reloadTestPos)
-                Toast.makeText(requireContext(), "Reload id = $reloadTestPos", Toast.LENGTH_SHORT)
-                    .show()
+                addLog("Reload id = $reloadTestPos")
             } else {
                 if (testModel.size > 0) {
                     showTest(testModel.lastIndex)
-                    Toast.makeText(
-                        requireContext(),
-                        "else Reload id = ${testModel.lastIndex}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    addLog("(reloadTestPos = -1) Reload id = ${testModel.lastIndex}")
                 }
             }
             binding.swiperefresh.isRefreshing = false
@@ -113,7 +113,15 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
                         }
                         NetworkStatus.SUCCESS -> {
                             binding.progressCircular.visibility = View.INVISIBLE
+
                             addLog("succes add to api")
+
+                            CoroutineScope(Dispatchers.IO).launch {
+                                viewmodel.addAnswersDatabase()
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    findNavController().navigate(R.id.action_testingFragment_to_resultFragment)
+                                }
+                            }
                         }
                         NetworkStatus.ERROR -> {
                             binding.progressCircular.visibility = View.INVISIBLE
@@ -127,6 +135,14 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
             }
         }
 
+        binding.nextBtn.setOnClickListener {
+
+            //showTest()
+        }
+
+        binding.previousBtn.setOnClickListener {
+            //showTest()
+        }
     }
 
     private fun firstLoadTest() {
@@ -140,10 +156,10 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
 
                     CoroutineScope(Dispatchers.Main).launch {
 
-                        Toast.makeText(requireContext(), "Null", Toast.LENGTH_SHORT).show()
+                        addLog("Null")
 
                         viewmodel.enterTest(loginDataModel.guid!!, loginDataModel.subId!!)
-                            .observe(viewLifecycleOwner) { it ->
+                            .observe(viewLifecycleOwner) {
                                 when (it.status) {
                                     NetworkStatus.LOADING -> {
                                         binding.progressCircular.visibility = View.VISIBLE
@@ -154,8 +170,7 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
                                         CoroutineScope(Dispatchers.IO).launch {
                                             viewmodel.saveEnterTestModel(enterTestModel)
                                         }
-                                        Toast.makeText(requireContext(), "Api", Toast.LENGTH_SHORT)
-                                            .show()
+                                        addLog("Api")
                                         saveTestsLocal()
                                     }
 
@@ -173,7 +188,7 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
                         viewmodel.getEnterTestModel().contesters!!
                     )
                     CoroutineScope(Dispatchers.Main).launch {
-                        Toast.makeText(requireContext(), "Database", Toast.LENGTH_SHORT).show()
+                        addLog("Database")
                         saveTestsLocal()
                     }
 
@@ -258,7 +273,7 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
         asciiVal = 65
         binding.answersLayout.removeAllViews()
         for (i in 1..answersSize) {
-            val params = LinearLayout.LayoutParams(
+            val params = LayoutParams(
                 LayoutParams.MATCH_PARENT,
                 280
             )
@@ -275,11 +290,11 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
             btn.insetBottom = 0
 
             btn.insetTop = 0
-            asciiVal++;
+            asciiVal++
             btn.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.primary))
             binding.answersLayout.addView(btn, params)
             val btn1 = requireActivity().findViewById(myId) as Button
-            btn1.setOnClickListener { view ->
+            btn1.setOnClickListener {
 
                 viewmodel.addAnswerLocal(
                     AnswerModel(
@@ -303,6 +318,7 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
     @SuppressLint("SetJavaScriptEnabled")
     private fun openPdfFromUrl(url: String) {
 
+        binding.swiperefresh.isEnabled = true
         binding.progressCircular.visibility = View.VISIBLE
         binding.progressText.visibility = View.VISIBLE
         binding.pdfView.visibility = View.INVISIBLE
@@ -324,7 +340,7 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
 
             val settings: WebSettings = pdfView.settings
             settings.javaScriptEnabled = true
-            settings.builtInZoomControls = true;
+            settings.builtInZoomControls = true
             settings.setSupportZoom(true)
 
             pdfView.loadUrl("https://docs.google.com/viewer?url=$url")
@@ -335,7 +351,7 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
                     if (newProgress == 100) {
                         binding.progressCircular.visibility = View.INVISIBLE
                         binding.progressText.visibility = View.INVISIBLE
-                        binding.swiperefresh.isEnabled = true
+                        binding.swiperefresh.isEnabled = false
                         binding.pdfView.visibility = View.VISIBLE
                     } else {
                         binding.swiperefresh.isEnabled = true
@@ -343,7 +359,6 @@ class TestingFragment : Fragment(R.layout.fragment_testing), OnItemClickListener
                         binding.progressText.visibility = View.VISIBLE
                         binding.pdfView.visibility = View.INVISIBLE
                         binding.progressText.text = "$newProgress %"
-
                     }
                 }
 
